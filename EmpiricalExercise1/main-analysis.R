@@ -4,7 +4,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(dplyr, tidyr, stargazer, withr)
+pacman::p_load(dplyr, tidyr, stargazer, withr, ggplot2)
 
 out_dir =  "EmpiricalExercise1/output"
 
@@ -70,15 +70,43 @@ combined_df = HCRIS_Data_df %>%
 
 ## 1.Summary statistics on hospital total revenues and uncompensated care
    #mean/standard deviation/min/max
-
 with_dir(out_dir, stargazer(combined_df[2:3]*(1/1000000), 
                                     type = "latex", digits = 1, 
                                     title = "Summary Statistics (in Million Dollars)",
                                     style = "qje",
                                     out = "summarystatistics.tex"))
 
-## 2.Plot of mean hospital uncompensated care from 2013 to 2019 (by owership type)
+## 2.Plot of mean hospital uncompensated care from 2013 to 2019 (by ownership type)
 
+full_mean_unc_df <- combined_df %>%
+                  group_by(year) %>% 
+                    summarize(mean = mean(uncomp_care)/1000000)
+
+full_mean_unc_graph <- ggplot(full_mean_unc_df, aes(x = year, y = mean))+
+                      theme(plot.title = element_text(size=12)) +
+                     geom_line(size=1.5) +
+                      labs(title = "Average Hospital Uncompensated Care from 2013 to 2019",
+                           x = "Year",
+                           y = "Million dollars")
+ggsave(path = out_dir, filename = "full_mean_unc_graph.png")
+
+#By group
+mean_unc_bg_df <- combined_df %>%
+                        filter(private == 1) %>% #Get only private data
+                        group_by(year, non_profit_private) %>%
+                        mutate(non_profit_private = factor(non_profit_private)) %>% 
+                        summarize(mean = mean(uncomp_care)/1000000)
+
+mean_unc_bg_graph <- ggplot(mean_unc_bg_df, aes(x = year, y = mean, col=non_profit_private))+
+                                  geom_line(size=1.5) +
+                                  theme(plot.title = element_text(size=12)) +
+                                  labs(title = "Average Hospital Uncompensated Care from 2013 to 2019",
+                                       subtitle = "By organization type, private hospitals only",
+                                  x = "Year",
+                                  y = "Million dollars")+
+  scale_color_discrete(name="Orginization Type",
+                       labels=c("Non-profit Private","Profit Private"))
+ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
 
 ## Investigation on the effect of Medicaid expansion on hospital uncompensated care
 ## 3.TWFE estimation 
@@ -88,7 +116,7 @@ with_dir(out_dir, stargazer(combined_df[2:3]*(1/1000000),
 
   ## 3.3 2015 treatment group v.s. never-treated
 
-  ## 3.4 2016 treatement group v.s. never-treated
+  ## 3.4 2016 treatment group v.s. never-treated
 
 ## 4.Event study
   ##4.1 Full sample (treated vs non-treated)
