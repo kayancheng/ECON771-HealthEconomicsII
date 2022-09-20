@@ -4,7 +4,9 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(dplyr, tidyr)
+pacman::p_load(dplyr, tidyr, stargazer, withr)
+
+out_dir =  "EmpiricalExercise1/output"
 
 # Import data -------------------------------------------------------------
 out_data.path <- "EmpiricalExercise1/data/data-out/"
@@ -58,13 +60,25 @@ combined_df = HCRIS_Data_df %>%
                     medicaid_expansion_df,
                     by = "state") %>%
   
-                    drop_na(uncomp_care)
+                    drop_na(uncomp_care, tot_pat_rev) %>%
+  
+                    transform(uncomp_care = as.numeric(uncomp_care), 
+                              tot_pat_rev = as.numeric(tot_pat_rev),
+                              year = as.numeric(year))
 
 # Main Analysis -------------------------------------------------------------
 
 ## 1.Summary statistics on hospital total revenues and uncompensated care
+   #mean/standard deviation/min/max
+
+with_dir(out_dir, stargazer(combined_df[2:3]*(1/1000000), 
+                                    type = "latex", digits = 1, 
+                                    title = "Summary Statistics (in Million Dollars)",
+                                    style = "qje",
+                                    out = "summarystatistics.tex"))
 
 ## 2.Plot of mean hospital uncompensated care from 2013 to 2019 (by owership type)
+
 
 ## Investigation on the effect of Medicaid expansion on hospital uncompensated care
 ## 3.TWFE estimation 
