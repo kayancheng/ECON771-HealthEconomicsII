@@ -18,6 +18,6 @@ Please run the following code in R following the specific sequence to prepare th
 
 1. unzip.R
 2. Code from Prof. Ian McCarthy
-  - HCRIS-code-from-ian/_HCRIS_Data.R
-  - Insurance-access-code-from-ian/_BuildFinalData.R
-  - pos-code-from-ian/data-combined.R
+    - HCRIS-code-from-ian/_HCRIS_Data.R
+    - Insurance-access-code-from-ian/_BuildFinalData.R
+    - pos-code-from-ian/data-combined.R
