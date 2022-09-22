@@ -4,7 +4,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(dplyr, tidyr, stargazer, withr, ggplot2)
+pacman::p_load(dplyr, tidyr, stargazer, withr, ggplot2, fixest, modelsummary)
 
 out_dir =  "EmpiricalExercise1/output"
 
@@ -32,8 +32,8 @@ medicaid_expansion_df =
   mutate(State = c(state.abb, 'DC')[match(State, #abbreviation of state (used in HCRIS and pos)
                                           c(state.name, 'District of Columbia'))],
     year = format(as.Date(medicaid_expansion_df$date_adopted), format="%Y")) %>%
-  rename(year_expand = year, state = State) %>%
-  select(state, expanded, year_expand)
+  rename(year_expand = year, state = State, expanded_ever = expanded) %>% 
+  select(state, expanded_ever, year_expand)
   
 ## POS
 `pos-data-combined_df` = 
@@ -60,11 +60,17 @@ combined_df = HCRIS_Data_df %>%
                     medicaid_expansion_df,
                     by = "state") %>%
   
-                    drop_na(uncomp_care, tot_pat_rev) %>%
+                    drop_na(uncomp_care, tot_pat_rev, expanded_ever) %>%
   
                     transform(uncomp_care = as.numeric(uncomp_care), 
                               tot_pat_rev = as.numeric(tot_pat_rev),
-                              year = as.numeric(year))
+                              year = as.numeric(year), 
+                              expanded_ever = as.integer(as.logical(expanded_ever))) %>%
+  
+                    transform(uncomp_care = uncomp_care/1000000, 
+                              tot_pat_rev = tot_pat_rev/1000000) %>%
+                    
+                    mutate(expanded_t = ifelse(year < year_expand | is.na(year_expand), 0, 1))
 
 # Main Analysis -------------------------------------------------------------
 
@@ -80,7 +86,7 @@ with_dir(out_dir, stargazer(combined_df[2:3]*(1/1000000),
 
 full_mean_unc_df <- combined_df %>%
                   group_by(year) %>% 
-                    summarize(mean = mean(uncomp_care)/1000000)
+                    summarize(mean = mean(uncomp_care))
 
 full_mean_unc_graph <- ggplot(full_mean_unc_df, aes(x = year, y = mean))+
                       theme(plot.title = element_text(size=12)) +
@@ -95,7 +101,7 @@ mean_unc_bg_df <- combined_df %>%
                         filter(private == 1) %>% #Get only private data
                         group_by(year, non_profit_private) %>%
                         mutate(non_profit_private = factor(non_profit_private)) %>% 
-                        summarize(mean = mean(uncomp_care)/1000000)
+                        summarize(mean = mean(uncomp_care))
 
 mean_unc_bg_graph <- ggplot(mean_unc_bg_df, aes(x = year, y = mean, col=non_profit_private))+
                                   geom_line(size=1.5) +
@@ -111,17 +117,45 @@ ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
 ## Investigation on the effect of Medicaid expansion on hospital uncompensated care
 ## 3.TWFE estimation 
   ## 3.1 Full sample (treated vs non-treated)
+  TWFE_full = feols(uncomp_care ~ expanded_t | provider_number + year, data= combined_df)
 
   ## 3.2 2014 treatment group v.s. never-treated
+  t_tnt_2014.data = combined_df %>%
+    filter(year_expand == 2014| is.na(year_expand))
+  
+  TWFE_2014 = feols(uncomp_care ~ expanded_t | provider_number + year, data= t_tnt_2014.data)
 
   ## 3.3 2015 treatment group v.s. never-treated
+  t_tnt_2015.data = combined_df %>%
+    filter(year_expand == 2015| is.na(year_expand))
+  
+  TWFE_2015 = feols(uncomp_care ~ expanded_t | provider_number + year, data= t_tnt_2015.data)
 
   ## 3.4 2016 treatment group v.s. never-treated
+  t_tnt_2016.data = combined_df %>%
+    filter(year_expand == 2016| is.na(year_expand))
+  
+  TWFE_2016 = feols(uncomp_care ~ expanded_t | provider_number + year, data= t_tnt_2016.data)
+  
+  #3.5 Combine results from 3.1 to 3.4 into a table
+  msummary(list("Full"=TWFE_full, "2014"=TWFE_2014, "2015"=TWFE_2015, "2016"=TWFE_2016),
+           shape=term + statistic ~ model, 
+           gof_map=NA,
+           coef_omit='Intercept',
+           v_cov = ~state,
+           stars = TRUE
+  )
 
 ## 4.Event study
   ##4.1 Full sample (treated vs non-treated)
+  ES_full = feols(uncomp_care~i(year, expanded_ever, ref=2013) | state + year,
+                    cluster=~state,
+                    data=combined_df)
+  
+  
 
   ##4.2 2014 treatment group v.s. never-treated
+  
 
 ## 5.SA Event study
 
