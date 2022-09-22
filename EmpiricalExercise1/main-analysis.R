@@ -65,6 +65,7 @@ combined_df = HCRIS_Data_df %>%
                     transform(uncomp_care = as.numeric(uncomp_care), 
                               tot_pat_rev = as.numeric(tot_pat_rev),
                               year = as.numeric(year), 
+                              year_expand = as.numeric(year_expand),
                               expanded_ever = as.integer(as.logical(expanded_ever))) %>%
   
                     transform(uncomp_care = uncomp_care/1000000, 
@@ -137,29 +138,56 @@ ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
   
   TWFE_2016 = feols(uncomp_care ~ expanded_t | provider_number + year, data= t_tnt_2016.data)
   
-  #3.5 Combine results from 3.1 to 3.4 into a table
+  ##3.5 Combine results from 3.1 to 3.4 into a table
   msummary(list("Full"=TWFE_full, "2014"=TWFE_2014, "2015"=TWFE_2015, "2016"=TWFE_2016),
            shape=term + statistic ~ model, 
            gof_map=NA,
            coef_omit='Intercept',
-           v_cov = ~state,
-           stars = TRUE
+           stars = TRUE,
+           coef_rename = c("expanded_t" = "Treatment")
   )
 
 ## 4.Event study
   ##4.1 Full sample (treated vs non-treated)
-  ES_full = feols(uncomp_care~i(year, expanded_ever, ref=2013) | state + year,
-                    cluster=~state,
-                    data=combined_df)
+  ES.data = combined_df %>%
+    mutate(relative_t_expand = year_expand - year) %>%
+    mutate(relative_t_expand = coalesce(relative_t_expand, 0))
+  #Replaced NA in relative_t_expand to 0 so no losing data in reg, eventually will times 0
+  #so replacing is not affecting result
   
-  
+  ES_full = feols(uncomp_care~i(relative_t_expand, expanded_ever, ref=0) | state + year,
+                  cluster=~state,
+                  data= ES.data)
 
   ##4.2 2014 treatment group v.s. never-treated
+  ES_2014.data = t_tnt_2014.data %>%
+    mutate(relative_t_expand = year_expand - year) %>%
+    mutate(relative_t_expand = coalesce(relative_t_expand, 0))
+  #Replaced NA in relative_t_expand to 0 so no losing data in reg, eventually will times 0
+  #so replacing is not affecting result
+      
+  ES_2014 = feols(uncomp_care~i(relative_t_expand, expanded_ever, ref=0) | state + year,
+                  cluster=~state,
+                  data= ES_2014.data)
   
+  ##4.3 Combine results from 4.1 to 4.2 into a table
+  msummary(list("Full"=ES_full, "2014"=ES_full),
+           shape=term + statistic ~ model, 
+           gof_map=NA,
+           coef_omit='Intercept',
+           stars = TRUE
+  )
 
 ## 5.SA Event study
+  
+  
 
 ## 6. Event study graph on SA event study
+  
+  #Show results in an event Study graph
+  a = iplot(ES_full, 
+            xlab = 'Time to treatment',
+            main = 'Event study')
 
 ## 7. CS estimator
 
