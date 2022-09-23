@@ -121,7 +121,7 @@ msummary(list("SA_141516"=SA_141516),
 # Event study graph on the SA estimator
 Present an event study graph based on the results in part 5. Hint: you can do this automatically in `R` with the `fixest` package (using the `sunab` syntax for interactions), or with `eventstudyinteract` in `Stata`. These packages help to avoid mistakes compared to doing the tables/figures manually and also help to get the standard errors correct.
 ```{r q6}
-#iplot(SA_141516)
+iplot(SA_141516)
 ```
 
 \newpage
