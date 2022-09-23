@@ -4,7 +4,8 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, stargazer, withr, fixest, modelsummary, did, HonestDiD)
+pacman::p_load(tidyverse, stargazer, withr, fixest, modelsummary, did, HonestDiD,
+               xtable)
 
 
 # Import data -------------------------------------------------------------
@@ -74,12 +75,37 @@ combined_df = HCRIS_Data_df %>%
 
 # Main Analysis -------------------------------------------------------------
 
-# 1.Summary statistics on hospital total revenues and uncompensated care
+#1.Summary statistics on hospital total revenues and uncompensated care
 #mean/standard deviation/min/max
-# sumstat_tex = stargazer(combined_df[2:3],
-#                                     type = "latex", digits = 1,
-#                                     title = "Summary Statistics (in Million Dollars)",
-#                                     header=FALSE)
+
+options(xtable.comment = FALSE)
+
+combined_df_by_year_uncomp = combined_df %>%
+  mutate(year = as.character(year)) %>%
+  group_by(year) %>% 
+  summarize(
+    mean = mean(uncomp_care, na.rm = TRUE), 
+    std_dev = sd(uncomp_care, na.rm = TRUE),
+    min = min(uncomp_care, na.rm = TRUE),
+    max = max(uncomp_care, na.rm = TRUE)
+  )
+
+
+# xtable(combined_df_by_year_uncomp,
+#               caption = "Summary statistics of uncompensated care")
+
+combined_df_by_year_rev = combined_df %>%
+  mutate(year = as.character(year)) %>% 
+  group_by(year) %>% 
+  summarize(
+    mean = mean(tot_pat_rev, na.rm = TRUE), 
+    std_dev = sd(tot_pat_rev, na.rm = TRUE),
+    min = min(tot_pat_rev, na.rm = TRUE),
+    max = max(tot_pat_rev, na.rm = TRUE)
+  )
+
+# xtable(combined_df_by_year_rev,
+#               caption = "Summary statistics of total hospital revenus")
 
 ## 2.Plot of mean hospital uncompensated care from 2013 to 2019 (by ownership type)
 
@@ -110,7 +136,6 @@ mean_unc_bg_graph <- ggplot(mean_unc_bg_df, aes(x = year, y = mean, col=non_prof
                                   y = "Million dollars")+
   scale_color_discrete(name="Orginization Type",
                        labels=c("Non-profit Private","Profit Private"))
-ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
 
 ## Investigation on the effect of Medicaid expansion on hospital uncompensated care
 ## 3.TWFE estimation
@@ -173,6 +198,7 @@ ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
            gof_map=NA,
            stars = TRUE
   )
+    
 
 ## 5.SA Event study
   ##5.1 2014 treatment group v.s. never-treated
@@ -184,7 +210,7 @@ ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
     ) #Cohort with only negative `relative_t_expand` are treated as never treated
 
   #By default SA makes `relative_t_expand` = -1 as control group
-  SA_141516 = feols(uncomp_care~sunab(year_expand, relative_t_expand) | state + year,
+  SA_141516 = feols(uncomp_care~sunab(year_expand, relative_t_expand, no_agg = TRUE) | state + year,
                   cluster=~state,
                   data=SA_141516.data)
 
