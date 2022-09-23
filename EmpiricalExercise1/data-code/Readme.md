@@ -2,7 +2,7 @@
 
 This folder contains code used for getting raw data of the analysis, which includes:
 
-1. unzip.R for unzipping data from HCRIS and Provider of Services files
+1. ``unzip.R`` for unzipping data from HCRIS and Provider of Services files
     - The unzipped files goes to folder data/data-out/unzip_raw
     
   
@@ -16,8 +16,8 @@ This folder contains code used for getting raw data of the analysis, which inclu
 
 Please run the following code in R following the specific sequence to prepare the data:
 
-1. unzip.R
+1. ``unzip.R``
 2. Code from Prof. Ian McCarthy
-    - HCRIS-code-from-ian/_HCRIS_Data.R
-    - Insurance-access-code-from-ian/_BuildFinalData.R
-    - pos-code-from-ian/data-combined.R
+    - HCRIS-code-from-ian/``_HCRIS_Data.R``
+    - Insurance-access-code-from-ian/``_BuildFinalData.R``
+    - pos-code-from-ian/``data-combined.R``
