@@ -81,6 +81,8 @@ msummary(list("Full"=TWFE_full, "2014"=TWFE_2014, "2015"=TWFE_2015, "2016"=TWFE_
 ```
 
   Discussions:
+  
+  From the table we can see that the estimated treatment effect is similar across all the settings. Recall that one of the hazard of using TWFE is that it assumed common treatment timing. By comparing across groups, we perform a robustness check to strengthen the evidence for the negative effect.
 
 \newpage
 
