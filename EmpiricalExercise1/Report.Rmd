@@ -148,8 +148,14 @@ cs_HDiD_smooth
 # Discussions and findings
 Discuss your findings and compare estimates from different estimators (e.g., are your results sensitive to different specifications or estimators? Are your results sensitive to violation of parallel trends assumptions?).
 
+The result is consistent across all the estimators. It suggests that there is a strong evidence for the causal relationship between insurance expansion and uncompensated care. That is, insurance expansion caused a substatial reduction in the uncompensated care. In a policy evaluation point of view, it implies that the policy on insurance expansion is successful to help previously uninsured group to seek help.
+
 \newpage
 
 # Reflection
 Reflect on this assignment. What did you find most challenging? What did you find most surprising? 
+
+I think the most challenging part of doing this assignment is to get familar with all the insitutional detail so that we can operate on the data. Merging different datasets, and creating relevant variables all require knowledge on the data, and also nature of policy and hospital. I think this is also the most surprising part to me because I was not aware of the importance of institutional details before. 
+
+
 
