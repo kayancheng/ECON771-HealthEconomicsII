@@ -4,7 +4,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(dplyr, tidyr, stargazer, withr, ggplot2, fixest, modelsummary)
+pacman::p_load(dplyr, tidyr, stargazer, withr, ggplot2, fixest, modelsummary, did)
 
 out_dir =  "EmpiricalExercise1/output"
 
@@ -150,23 +150,23 @@ ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
 ## 4.Event study
   ##4.1 Full sample (treated vs non-treated)
   ES.data = combined_df %>%
-    mutate(relative_t_expand = year_expand - year) %>%
+    mutate(relative_t_expand = year - year_expand) %>%
     mutate(relative_t_expand = coalesce(relative_t_expand, 0))
   #Replaced NA in relative_t_expand to 0 so no losing data in reg, eventually will times 0
   #so replacing is not affecting result
   
-  ES_full = feols(uncomp_care~i(relative_t_expand, expanded_ever, ref=0) | state + year,
+  ES_full = feols(uncomp_care~i(relative_t_expand, expanded_ever, ref=-1) | provider_number + year,
                   cluster=~state,
                   data= ES.data)
 
   ##4.2 2014 treatment group v.s. never-treated
   ES_2014.data = t_tnt_2014.data %>%
-    mutate(relative_t_expand = year_expand - year) %>%
+    mutate(relative_t_expand = year - year_expand) %>%
     mutate(relative_t_expand = coalesce(relative_t_expand, 0))
   #Replaced NA in relative_t_expand to 0 so no losing data in reg, eventually will times 0
   #so replacing is not affecting result
       
-  ES_2014 = feols(uncomp_care~i(relative_t_expand, expanded_ever, ref=0) | state + year,
+  ES_2014 = feols(uncomp_care~i(relative_t_expand, expanded_ever, ref=-1) | provider_number + year,
                   cluster=~state,
                   data= ES_2014.data)
   
@@ -174,22 +174,48 @@ ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
   msummary(list("Full"=ES_full, "2014"=ES_full),
            shape=term + statistic ~ model, 
            gof_map=NA,
-           coef_omit='Intercept',
            stars = TRUE
   )
 
 ## 5.SA Event study
+  ##5.1 2014 treatment group v.s. never-treated
+  SA_141516.data = ES.data %>%  #Focus on 2014/2015/2016
+    mutate(
+    year_expand = 
+      ifelse(expanded_ever ==0, 10000, year_expand), #Any number will be fine, they are regarded as untreated gp in next line
+    relative_t_expand =  ifelse(expanded_ever ==0, -1, relative_t_expand)
+    ) #Cohort with only negative `relative_t_expand` are treated as never treated
   
-  
+  #By default SA makes `relative_t_expand` = -1 as control group
+  SA_141516 = feols(uncomp_care~sunab(year_expand, relative_t_expand) | state + year,
+                  cluster=~state,
+                  data=SA_141516.data)
 
-## 6. Event study graph on SA event study
+  msummary(list("SA_141516"=SA_141516),
+           shape=term + statistic ~ model, 
+           gof_map=NA,
+           stars = TRUE
+  )
   
-  #Show results in an event Study graph
-  a = iplot(ES_full, 
-            xlab = 'Time to treatment',
-            main = 'Event study')
+  
+## 6. Event study graph on SA event study
+  iplot(SA_141516)
 
 ## 7. CS estimator
+  CS.data = combined_df %>%
+    mutate(year_expand=ifelse(is.na(year_expand),0,year_expand)) %>%
+    group_by(provider_number) %>%
+    mutate(provider_number=cur_group_id()) %>% ungroup()
+  
+  CS = att_gt(yname="uncomp_care", tname="year", idname="provider_number",
+                   gname="year_expand",
+                   data=CS.data, panel=TRUE, est_method="dr",
+                   allow_unbalanced_panel=TRUE)
+  CS_event <- aggte(CS, type="dynamic")
 
 ## 8. Rambachan and Roth 
+  
+  
+  
+  
 
