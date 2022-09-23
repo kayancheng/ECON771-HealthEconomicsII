@@ -4,7 +4,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(dplyr, tidyr, stargazer, withr, ggplot2, fixest, modelsummary, did)
+pacman::p_load(tidyverse, stargazer, withr, fixest, modelsummary, did, HonestDiD)
 
 out_dir =  "EmpiricalExercise1/output"
 
@@ -214,8 +214,19 @@ ggsave(path = out_dir, filename = "mean_unc_bg_graph.png")
   CS_event <- aggte(CS, type="dynamic")
 
 ## 8. Rambachan and Roth 
+  #Sensitivity plot of the estimated CS ATT
+  source("EmpiricalExercise1/honestdid_fn.R")
+  M_grid = c(500, 1000, 1500, 2000)
   
+  hd_cs_smooth_never <- honest_did(CS_event,
+                                   type="smoothness",
+                                   Mvec=M_grid)
   
+  #Drop 0 as that is not really allowed
+  hd_cs_smooth_never$robust_ci <- hd_cs_smooth_never$robust_ci[-1,]
   
-  
+  # make sensitivity analysis plots
+  cs_HDiD_smooth <- createSensitivityPlot(hd_cs_smooth_never$robust_ci,
+                                          hd_cs_smooth_never$orig_ci)
+  cs_HDiD_smooth
 
