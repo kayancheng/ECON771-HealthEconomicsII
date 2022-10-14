@@ -151,15 +151,64 @@ combined_df_ni2012$v_hat = combined_df_ni2012$int - combined_df_ni2012$int_hat
 DW_S2 = feols(claims ~ int_hat + v_hat | npi + year, data= combined_df_ni2012)
 
 #7. Weak instruments
-#AR Wald Statistics
-wivm = ivmodelFormula(claims~int + year|practice_rev_change + year, 
+#AR Wald Statistics (We will need to use FWL)
+#FWL first step (claims on fes)
+wi_fwl_1 = feols(claims ~ 1 | npi + year, data= combined_df_ni2012)
+combined_df_ni2012$y_res = wi_fwl_1$residuals
+#FWL second step (int on fes)
+wi_fwl_2 = feols(int ~ 1 | npi + year, data= combined_df_ni2012)
+combined_df_ni2012$int_res = wi_fwl_2$residuals
+#FWL third step (int on fes)
+wivm = ivmodelFormula(y_res~int_res|practice_rev_change, 
                       data = combined_df_ni2012)
-Fstat = wivm$AR$Fstat
-#v.s. standard t-statistics
-TSLS
 
+AR_ci = AR.test(wivm)$ci.info
+#v.s. standard t-statistics
+TSLS_ci = paste0("[",TSLS$coeftable$Estimate-1.96*TSLS$coeftable$`Std. Error`, ",",
+                TSLS$coeftable$Estimate+1.96*TSLS$coeftable$`Std. Error`,"]")
+
+#tF adjusted standard error
+#Inspecting the first step F statistics:
+fs_f = (fs$coefficients[["practice_rev_change"]]/fs$se[["practice_rev_change"]])^2
+#Since the first stage f-statistics is so huge, no adjustment will be made
+#Therefore the test conclusion will be the same too
 
 #8. Borusyak and Hull (2021)
+for (y in 2012:2017){
+  iv_temp = iv %>%
+    filter(year == y)
+  iv_vec = as.numeric(unlist(iv_temp["practice_rev_change"]))
+  len = length(iv_vec)
+  mu_vec = replicate(len,mean(sample(iv_vec,size = 100, replace = TRUE)))
+  if (y == 2012){
+    mu = mu_vec
+  } else {
+    mu = append(mu, mu_vec)
+  }
+}
+
+iv$iv_mu = mu
+
+#Recentered iv
+iv = iv%>%
+  mutate(iv_rc = practice_rev_change-mu)
+
+#Add the recentered iv into df
+combined_df_ni2012 = combined_df_ni2012 %>%
+  left_join(iv,
+            by = c("year", "group1"="tax_id", "practice_rev_change"))
+
+#Re-estimate 2SLS
+#First Stage: Regress X on Z
+nfs = feols(int ~ iv_rc | npi + year, data= combined_df_ni2012)
+combined_df_ni2012$nint_hat = nfs$fitted.values
+
+#2SLS Estimator: Regress Y on Xhat
+nTSLS = feols(claims ~ nint_hat | npi + year, data= combined_df_ni2012)
+
+# Save workspace to pass to Rmd ------------------------------------------------
+save.image (file = "EmpiricalExercise2/emp_ex2.RData")
+
 
 
 

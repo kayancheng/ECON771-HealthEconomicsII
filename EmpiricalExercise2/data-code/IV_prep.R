@@ -66,7 +66,8 @@ for (i in 2012:2017){
 }
 
 colnames(medicare.puf) = tolower(colnames(medicare.puf))
-
+medicare.puf = medicare.puf %>%
+  mutate (line_srvc_cnt = log(line_srvc_cnt))
 #3. pfs.yearly
 in_data.path.pfs <- "EmpiricalExercise2/data/data-in/PFS_update_data.txt"
 
