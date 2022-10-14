@@ -1,0 +1,211 @@
+---
+title: "Final Report for Empirical Exercise 2"
+author: "Ka Yan CHENG"
+date: "`r Sys.Date()`"
+output: bookdown::pdf_document2
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE,
+                      fig.width = 10, fig.height = 5.5, fig.align = 'center')
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, stargazer, withr, fixest, modelsummary, kableExtra, xtable,  ivmodel)
+
+load("emp_ex2.RData")
+```
+
+\newpage
+
+# Introduction
+
+In this study, we use the Medicare payment shock introduced in 2010 (enhancing payments to physicians for services provided in outpatient facilities compared to those in their offices) as instrument to study the effects of a physician’s affiliation with a hospital on physician practice patterns. 3 different datasets are incorporated to implement this study, which are:
+
+1. **Medicare Data on Provider Practice and Specialty** - [Details](https://resdac.org/cms-data/files/md-ppas)
+2. **Medicare Utilization and Payment Data** - [Details](https://data.cms.gov/provider-summary-by-type-of-service/medicare-physician-other-practitioners/medicare-physician-other-practitioners-by-provider-and-service)
+3. **Physician Fee Schedule 2010 Update** - [Details](https://github.com/imccart/PFS_Update_2010)
+
+Notice that a major limitation of our study is the lack of utilization and payment data before 2012. Our study thus focuses on years from 2012 to 2017. However, even though the price shock was first initiated from 2010, it was not finalized until 2013. Therefore, our study can still take advantage of the gradual variations from 2012 to conduct treatment effect studies as below.
+
+Organization and access to the data are based on practices provided by Prof. Ian McCarthy.
+
+[Here](https://github.com/kayancheng/ECON771-HealthEconomicsII/tree/main/EmpiricalExercise2) is the Github Repo containing all necessary files to reproduce results in this report.
+
+\newpage
+
+# Summary Statistics
+Provide and discuss a table of simple summary statistics showing the mean, standard deviation, min, and max of total physician-level Medicare spending, claims, and patients.
+```{r q1,  results = "asis"}
+options(xtable.comment = FALSE)
+xt_spending = xtable(tab_spending,
+              caption = "Summary statistics of physician-level Medicare spending")
+names(xt_spending) <- c('year', 'Mean','SD','Min', 'Max')
+print(xt_spending, include.rownames=FALSE)
+
+xt_claims = xtable(tab_claims,
+              caption = "Summary statistics of physician-level number of claims")
+names(xt_claims) <- c('year', 'Mean','SD','Min', 'Max')
+print(xt_claims, include.rownames=FALSE)
+
+xt_patients = xtable(PUF_tab_pat,
+              caption = "Summary statistics of physician-level number of patients")
+names(xt_patients) <- c('year', 'Mean','SD','Min', 'Max')
+print(xt_patients, include.rownames=FALSE)
+
+```
+
+\newpage
+
+# Trend of average physician-level claims
+
+Form a proxy for integration using the ratio:
+\begin{equation}
+INT_{it} = \mathbf{1} \left(\frac{HOPD_{it}}{HOPD_{it} + OFFICE_{it} + ASC_{it}} \geq 0.75\right),
+(\#eq:int)
+\end{equation}
+where $HOPD_{it}$ reflects the total number of claims in which physician $i$ bills in a hospital outpatient setting, $OFFICE_{it}$ is the total number of claims billed to an office setting, and $ASC_{it}$ is the total number of claims billed to an ambulatory surgery center. As reflected in Equation \@ref(eq:int), you can assume that any physician with at least 75% of claims billed in an outpatient setting is integrated with a hospital. Using this 75% threshold, plot the mean of total physician-level claims for integrated versus non-integrated physicians over time.
+```{r q2,  results = "asis"}
+mean_claim_bint_graph
+
+```
+
+\newpage
+
+# Basic TWFE Model 
+
+Estimate the relationship between integration on (log) total physician claims using OLS, with the following specification:
+\begin{equation}
+y_{it} = \delta INT_{it} + \beta x_{it} + \gamma_{i} + \gamma_{t} + \varepsilon_{it}, 
+(\#eq:ols)
+\end{equation}
+where $INT_{it}$ is defined in Equation \@ref(eq:int), $x_{it}$ captures time-varying physician characteristics, and $\gamma_{i}$ and $\gamma_{t}$ denote physician and time fixed effects. Please focus on physician's that weren't yet integrated as of 2012, that way we have some pre-integration data for everyone. Impose this restriction for the remaining questions. Feel free to experiment with different covariates in $x_{it}$ or simply omit that term and only include the fixed effects.
+```{r q3}
+msummary(list("Basic TWFE Model"=TWFE),
+            shape=term + statistic ~ model,
+            gof_map=NA,
+            stars = TRUE,
+            coef_rename = c("int" = "Integration")) %>%
+            kable_styling(latex_options = "HOLD_position"
+   )
+
+```
+
+\newpage
+
+# Oster bound
+
+How much should we be "worried" about endogeneity here? Extending the work of @altonji2005, @oster2019 derives the expression
+\begin{equation}
+\delta^{*} \approx \hat{\delta}_{D,x_{1}} - \rho \times \left[\hat{\delta}_{D} - \hat{\delta}_{D,x_{1}}\right] \times \frac{R_{max}^{2} - R_{D,x_{1}}^{2}}{R_{D,x_{1}}^{2} - R_{D}^{2}} \xrightarrow{p} \delta,
+(\#eq:oster)
+\end{equation}
+where $x_{1}$ captures our observable covariates (or fixed effects in our case); $\delta$ denotes the treatment effect of interest; $\hat{\delta}_{D,x_{1}}$ denotes the coefficient on $D$ from a regression of $y$ on $D$ and $x_{1}$; $R_{D,x_{1}}^{2}$ denotes the $R^{2}$ from that regression; $\hat{\delta}_{D}$ denotes the coefficient on $D$ from a regression of $y$ on $D$ only; $R_{D}^{2}$ reflects the $R^{2}$ from that regression; $R_{max}^{2}$ denotes an unobserved "maximum" $R^{2}$ from a regression of $y$ on $D$, observed covariates $x_{1}$, and some unobserved covariates $x_{2}$; and $\rho$ denotes the degree of selection on observed variables relative to unobserved variables. One approach that Oster suggests is to consider a range of $R^{2}_{max}$ and $\rho$ to bound the estimated treatment effect, where the bounds are given by $\left[ \hat{\delta}_{D,x_{1}}, \delta^{*}(R^{2}_{max}, \rho) \right]$. Construct these bounds based on all combinations of $\rho \in (0, .5, 1, 1.5, 2)$ and $R_{max}^{2} \in (0.5, 0.6, 0.7, 0.8, 0.9, 1)$ and present your results in a table. What do your results say about the extent to which selection on observables could be problematic here? 
+```{r q4,  results = "asis"}
+xt_robomit = xtable(robomit_result,
+                    caption = "Oster bound of the estimated treatment effect")
+
+print(xt_robomit)
+
+```
+The result tells us that the extent to which selection on observables could be a problem in here, because some of the ranges (when $\rho = 0.5$) in the table above cover 0 in the middle.  
+
+
+\newpage
+
+# IV version of the TWFE model
+
+Construct the change in Medicare payments achievable for an integrated versus non-integrated physician practice due to the 2010 update to the physician fee schedule, $\Delta P_{it}$. Use this as an instrument for $INT_{it}$ in a 2SLS estimator following the same specification as in Equation \@ref(eq:ols). Present your results along with those of your "first stage" and "reduced form".
+
+```{r q5}
+msummary(list("First stage"=fs, "Reduced form"=rf, "TSLS"=TSLS),
+            shape=term + statistic ~ model,
+            gof_map=NA,
+            coef_omit='Intercept',
+            stars = TRUE,
+            coef_rename = c("practice_rev_change" = "Price change", "int_hat" = "Integration")) %>%
+            kable_styling(latex_options = "HOLD_position")
+
+```
+
+\newpage
+
+# Durbin-Wu-Hausman test 
+
+Assess the "need" for IV by implementing a Durbin-Wu-Hausman test with an augmented regression. Do this by first estimating the regression, $INT_{it} = \lambda \Delta P_{it} + \beta x_{it} + \gamma_{i} + \gamma_{t} + \varepsilon_{it}$, take the residual $\hat{\nu} = INT_{it} - \hat{INT}_{it}$, and run the regression $$y_{it} = \delta INT_{it} + \beta x_{it} + \gamma_{i} + \gamma_{t} + \kappa \hat{\nu} + \varepsilon_{it}.$$ Discuss your results for $\hat{\kappa}$.
+
+```{r q6}
+msummary(list("Durbin-Wu-Hausman test"=DW_S2),
+            shape=term + statistic ~ model,
+            gof_map=NA,
+            stars = TRUE,
+            coef_rename = c("int_hat" = "Integration", "v_hat" = "Residual")) %>%
+            kable_styling(latex_options = "HOLD_position"
+   )
+
+```
+
+The results for  a significant (and not small) $\hat{\kappa}$ implies the need of an IV in our setting. 
+
+\newpage
+
+# Weak instrument tests
+
+Now let's pay attention to potential issues of weak instruments. As we discussed in class, one issue with weak instruments is that our typical critical values (say, 1.96 for a 95% confidence interval) from the equation of interest (sometimes called the structural equation) are too low in the presence of a weak first-stage. These issues are presented very clearly and more formally in the Andrews, Stock, and Sun (2019) survey article. For this question, you will consider two forms of inference in the presence of weak instruments. Hint: Check out the `ivmodel` package in R or the `ivreg2` command in Stata for help getting the AR Wald statistic.
+
+  - Present the results of a test of the null, $H_{0}: \delta=0$, using the Anderson-Rubin Wald statistic. Do your conclusions from this test differ from a traditional t-test following 2SLS estimation of Equation \@ref(eq:ols)?
+```{r q7-1,  results = "asis"}
+xt_ar_ci = xtable(AR.test(wivm)$ci,
+       caption = "Anderson-Rubin confidence interval")
+print(xt_ar_ci, include.rownames=FALSE)
+
+```
+
+  - Going back to your 2SLS results...inflate your 2SLS standard errors to form the $tF$ adjusted standard error, following Table 3 in @lee2021. Repeat the test of the null, $H_{0}: \delta=0$, using standard critical values and the $tF$ adjusted standard error.
+  
+  We shall observe that the F-statistics in the first stage is big (`r round(fs_f,2)`), so adjustment is not effective. Below is the confidence interval for the coefficient in the 2SLS model. 
+```{r q7-2,  results = "asis"}
+tab_2SLS_ci = data.frame(lower = c(TSLS$coeftable$Estimate-1.96*TSLS$coeftable$`Std. Error`),
+           higher = c(TSLS$coeftable$Estimate+1.96*TSLS$coeftable$`Std. Error`))
+
+TSLS_ci = xtable(tab_2SLS_ci,
+       caption = "2SLS confidence interval")
+print(TSLS_ci, include.rownames=FALSE)
+
+```
+
+We can see that the range of the confidence interval is way bigger in the AR setting, but both of them agreed that the coefficient is significant in the negative range.
+
+\newpage
+
+# Borusyak and Hull (2021) re-centering approach
+
+Following the Borusyak and Hull (2021) working paper (BH), we can consider our instrument as a function of some exogenous policy shocks and some possibly endogenous physician characteristics, $\Delta P_{it}=f\left(g_{pt}; z_{ipt}\right)$, where $g_{pt}$ captures overall payment shocks for procedure $p$ at time $t$, and $z_{ip}$ denotes a physician's quantity of different procedures at baseline. We can implement the BH re-centering approach as follows:
+    - Consider hypothetical price changes over a set of possible counterfactuals by assuming that the counterfactuals consist of different allocations of the observed relative price changes. For example, take the vector of all relative price changes, reallocate this vector randomly, and assign new hypothetical relative price changes. Do this 100 times. This isn't "all" possible counterfactuals by any means, but it will be fine for our purposes.
+    - Construct the expected revenue change over all possible realizations from previously, $\mu_{it} = E [\Delta P_{it}]= \sum_{s=1}^{100} \sum_{p} g_{pt}^{s} z_{ip}$.
+    - Re-estimate Equation \@ref(eq:ols) by 2SLS when instrumenting for $INT_{it}$ with $\tilde{\Delta} P_{it} = \Delta P_{it} - \mu_{it}$. Intuitively, this re-centering should isolate variation in the instrument that is only due to the policy and remove variation in our instrument that is due to physician practice styles (the latter of which is not a great instrument).
+    
+```{r q8,  results = "asis"}
+msummary(list("BH re-centering approach"=nTSLS),
+            shape=term + statistic ~ model,
+            gof_map=NA,
+            stars = TRUE,
+            coef_rename = c("nint_hat" = "Integration")) %>%
+            kable_styling(latex_options = "HOLD_position"
+   )
+```
+
+
+\newpage
+
+# Discussion
+
+Discuss your findings and compare estimates from different estimators.
+
+In this study, under different settings, we found that there is a significant negative treatment effect of the integration variable. From the findings, we conclude that we believe there is a negative effects of a integration on physician claims.
+
+\newpage
+
+# Reflection
+
+Reflect on this assignment. What did you find most challenging? What did you find most surprising? 
+
+I was amazed that the modern IV method is so innovative compare to the classical one that we studied in standard econometrics classroom. I am looking forward to know more about them in more details as time constraint is the biggest challenge of this assignment.
