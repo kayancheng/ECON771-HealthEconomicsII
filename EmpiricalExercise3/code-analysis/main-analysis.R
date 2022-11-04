@@ -115,6 +115,10 @@ tab3_data <- data  %>%
   mutate(L2.LISPremiumPos = lag(LISPremiumPos, n = 2, default = NA, order_by=year)) %>%
   mutate(L3.LISPremiumPos = lag(LISPremiumPos, n = 3, default = NA, order_by=year)) %>%
   mutate(L4.LISPremiumPos = lag(LISPremiumPos, n = 4, default = NA, order_by=year)) %>%
+  mutate(L1.LISPremium = lag(LISPremium, n = 1, default = NA, order_by=year)) %>%
+  mutate(L2.LISPremium = lag(LISPremium, n = 2, default = NA, order_by=year)) %>%
+  mutate(L3.LISPremium = lag(LISPremium, n = 3, default = NA, order_by=year)) %>%
+  mutate(L4.LISPremium = lag(LISPremium, n = 4, default = NA, order_by=year)) %>%
   mutate(L1.LISPremiumNeg = lag(LISPremiumNeg, n = 1, default = NA, order_by=year)) %>%
   mutate(L2.LISPremiumNeg = lag(LISPremiumNeg, n = 2, default = NA, order_by=year)) %>%
   mutate(L3.LISPremiumNeg = lag(LISPremiumNeg, n = 3, default = NA, order_by=year)) %>%
@@ -185,7 +189,52 @@ Tab3 = modelsummary(models_ll, vcov = ~orgParentCode,
                     gof_map = c("nobs", "r.squared"),
                     add_rows = panel_B)
 
-#
+#7. Minimal coverage error (CE)-optimal bandwidths
+q7 = function(yr, ll){
+  if(ll == TRUE){
+    p = 1
+  } else {
+    p = 2
+  }
+  temp_df = eval(parse(text=paste0("tab3_data_",yr)))
+  result = rdrobust(temp_df$lnS, -temp_df$LISPremium, p = p, bwselect = "cerrd")
+  coef = round(result$coef[1],3)
+  se = round(result$se[1],3)
+  bw = round(result$bws[1,1],3)
+  se = paste0("(",round(se,3),")")
+  result_list = data.frame(coef, se, bw)
+  return(result_list)
+}
+
+
+for (i in 2006:2010){
+  if (i == 2006){
+    q7_tab_A = q7(i, ll = TRUE )
+  } else {
+    q7_tab_A = rbind(q7_tab_A, q7(i, ll = TRUE))
+  }
+}
+
+for (i in 2006:2010){
+  if (i == 2006){
+    q7_tab_B = q7(i, ll = FALSE)
+  } else {
+    q7_tab_B = rbind(q7_tab_B, q7(i, ll = FALSE))
+  }
+}
+
+rownames(q7_tab_A) = c(2006:2010)
+
+q7_tab_A = q7_tab_A %>%
+  t()
+
+rownames(q7_tab_B) = c(2006:2010)
+
+q7_tab_B = q7_tab_B %>%
+  t()
+
+#8. IV
+
 
 
 
