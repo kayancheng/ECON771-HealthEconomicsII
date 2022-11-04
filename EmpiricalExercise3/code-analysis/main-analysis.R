@@ -4,7 +4,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, haven, janitor, rdrobust, reshape2)
+pacman::p_load(tidyverse, haven, janitor, rdrobust, reshape2, rddensity)
 
 # Importing and Cleaning up the dataset -----------------------------------
 in_data.path <- "EmpiricalExercise3/data/data-in/Ericson 2014/DataFiles"
@@ -90,5 +90,9 @@ q4_lin_mod = erison_fig3(nb = "auto", return_obj = "linear_mod")
 optimal_h_lin = q4_lin_mod$J_MV
 
 #5. Manipulation tests
+q5_test_result = rddensity(fig3_data$LISPremium)
+suppressWarnings(summary(q5_test_result))
+q5_fig = rdplotdensity(q5_test_result, fig3_data$LISPremium, plotRange = c(-10, 10))
 
-
+#6. Table 3 Panel A and B
+  
