@@ -73,35 +73,15 @@ fig3_data <- data %>%
 binsize = 0.5
 nbin = 10/binsize
 
-rd.result_quartic <- rdplot(fig3_data$lnS, fig3_data$LISPremium, 
-                    c = 0,
-                    p = 4,
-                    nbin = nbin,
-                    h = 10,
-                    title = "",
-                    x.label="Monthly Premium - LIS Subsidy, 2006", 
-                    y.label="Log Enrollment Share, 2006")
+source("EmpiricalExercise3/code-analysis/rd_graph3_fn.R")
+q2_graph = erison_fig3(nb = nbin)
 
-rd.result_linear <- rdplot(fig3_data$lnS, fig3_data$LISPremium, 
-                    c = 0,
-                    p = 1,
-                    nbin = nbin,
-                    h = 4,
-                    title = "",
-                    x.label="Monthly Premium - LIS Subsidy, 2006", 
-                    y.label="Log Enrollment Share, 2006")
+#3. Figure 3 with different nbin
+#3.1 nbin = 10
+q3_graph_nb10 = erison_fig3(nb = 10)
 
-bin.avg_linear <- as_tibble(rd.result_linear$vars_bins)
-poly_linear <- as_tibble(rd.result_linear$vars_poly)
-
-bin.avg_quartic <- as_tibble(rd.result_quartic$vars_bins)
-poly_quartic <- as_tibble(rd.result_quartic$vars_poly)
-
-plot.q2 <- bin.avg_linear %>% ggplot(aes(x=rdplot_mean_x,y=rdplot_mean_y)) + 
-  geom_point() + theme_bw() +
-  poly_linear %>% geom_line(mapping = aes(x=rdplot_x,y=rdplot_y), size = 0.8, linetype = "dashed", colour = "gray69") + 
-  poly_quartic %>% geom_line(mapping = aes(x=rdplot_x,y=rdplot_y), size = 0.5) +
-  xlab("Monthly Premium - LIS Subsidy, 2006") + ylab("Log Enrollment Share, 2006")
+#3.2 nbin = 30
+q3_graph_nb30 = erison_fig3(nb = 30)
 
 
 
