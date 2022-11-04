@@ -77,6 +77,8 @@ For $J_{-,n}=J_{+,n}=30$:
 q3_graph_nb30
 ```
 
+Compare to the figure in the previous question which used 20 bins on both side, we can see that in the graph that is using 10 bins, the number of points is not enough to describe the behavior of the points. While for the one that is using 30 bins, it includes too much points that noises are included to distract reader.
+
 \newpage
 
 # Optimal bin number
@@ -149,10 +151,14 @@ xt_7B = kable(q7_tab_B, "latex", booktabs = T, align = "c")  %>%
 print(xt_7B)
 ```
 
+We can see that the estimated coefficients are largely different from what we had before. It suggests that using  pre-existing optimal bandwidth calculations can harm the reliability of our model estimation. Also, we can see that the optimal bandwidth differs across different models, it is therefore not recommended to use once-for-all practise.
+
 \newpage
 
 # Instrumental variable 
 Now let's extend the analysis in Section V of @ericson2014 using IV. Use the presence of Part D low-income subsidy as an IV for market share to examine the effect of market share in 2006 on future premium changes.
+
+**Ans:**
 ```{r q8,  results = "asis"}
 q8_tab
 ```
@@ -161,6 +167,13 @@ q8_tab
 # Discussions
 Discuss your findings and compare results from different binwidths and bandwidths. Compare your results in part 8 to the invest-then-harvest estimates from Table 4 in @ericson2014.
 
+**Ans:**
+Differences in binwidths do not affect model estimation, but choosing a suitable one can help readers or researchers to better understand the nature of the data (visually). On the other hand, choosing an optimal bandwidth is crucial for a reliable model estimation and we should pay attention to the justification of our choice. Especially, once-for-all practise should not be recommended. 
+
+Meanwhile, comparing results in our IV model and the one in Table 4 of Ericson(2014), it can be shown while being a more mature plan can be related to higher future premium, having big market share causes the opposite effect. That make intuitive sense because people trust in more mature plans and high market share makes plan difficult to grow further. 
+
 \newpage
 # Conclusion
 Reflect on this assignment. What did you find most challenging? What did you find most surprising?
+
+It is surprising to me that even we can visually see a big gap between the values lied on the left and the right of the cut-off, manipulation test might tell us that this is not enough for a RD. Statistical tools are helpful to help us from avoiding these traps. On the other hand, it is most challenging to me for trying to replicate exactly the practise used in the paper. But with the STATA code provided by the author, it becomes a possible task. It reminds me about how important it is for us to have our work replicable as a researcher.
