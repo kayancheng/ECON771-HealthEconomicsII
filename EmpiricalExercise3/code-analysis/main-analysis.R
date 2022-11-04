@@ -4,7 +4,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, haven, janitor, rdrobust, reshape2, rddensity)
+pacman::p_load(tidyverse, haven, janitor, rdrobust, reshape2, rddensity, tibble)
 
 # Importing and Cleaning up the dataset -----------------------------------
 in_data.path <- "EmpiricalExercise3/data/data-in/Ericson 2014/DataFiles"
@@ -95,4 +95,98 @@ suppressWarnings(summary(q5_test_result))
 q5_fig = rdplotdensity(q5_test_result, fig3_data$LISPremium, plotRange = c(-10, 10))
 
 #6. Table 3 Panel A and B
+
+#6.1 Table 3 Panel A
+tab3_data_temp <- data %>%
+  filter(benefit == "B") %>%
+  filter(year == 2006) %>%
+  filter((LISPremium>=-4) & (LISPremium<=4))
+
+uniqueID_list_RD_window2006 = unique(tab3_data_temp$uniqueID)
+
+tab3_data <- data  %>%
+  mutate(AboveBen = 1*(LISPremium>=0)) %>%
+  mutate(LISPremiumPos = LISPremium*AboveBen) %>%
+  mutate(BelowBen = 1*(LISPremium<=0)) %>%
+  mutate(LISPremiumNeg = LISPremium*BelowBen) %>%
+  mutate(BelowBen_2006_temp = 1*((year == 2006)&(BelowBen == 1))) %>%
+  group_by(uniqueID) %>%
+  mutate(L1.LISPremiumPos = lag(LISPremiumPos, n = 1, default = NA, order_by=year)) %>%
+  mutate(L2.LISPremiumPos = lag(LISPremiumPos, n = 2, default = NA, order_by=year)) %>%
+  mutate(L3.LISPremiumPos = lag(LISPremiumPos, n = 3, default = NA, order_by=year)) %>%
+  mutate(L4.LISPremiumPos = lag(LISPremiumPos, n = 4, default = NA, order_by=year)) %>%
+  mutate(L1.LISPremiumNeg = lag(LISPremiumNeg, n = 1, default = NA, order_by=year)) %>%
+  mutate(L2.LISPremiumNeg = lag(LISPremiumNeg, n = 2, default = NA, order_by=year)) %>%
+  mutate(L3.LISPremiumNeg = lag(LISPremiumNeg, n = 3, default = NA, order_by=year)) %>%
+  mutate(L4.LISPremiumNeg = lag(LISPremiumNeg, n = 4, default = NA, order_by=year)) %>%
+  ungroup()
+  
+uniqueID_list_BelowBen_2006 = unique(tab3_data$uniqueID[tab3_data$BelowBen_2006_temp==1])
+tab3_data$BelowBen_2006 = 0
+tab3_data$BelowBen_2006[tab3_data$uniqueID %in% uniqueID_list_BelowBen_2006] = 1
+
+tab3_data_2006 <- tab3_data %>%
+  filter(year == 2006) %>%
+  filter(uniqueID %in% uniqueID_list_RD_window2006)
+
+for(yr in 2007:2010){
+  dist2006 = yr - 2006
+  
+  temp_df = tab3_data %>%
+    filter(year == yr)  %>%
+    filter(uniqueID %in% uniqueID_list_RD_window2006) %>%
+    select(-c("LISPremiumNeg", "LISPremiumPos")) %>%
+    rename("LISPremiumNeg" = paste0("L",dist2006,".LISPremiumNeg")) %>%
+    rename("LISPremiumPos" = paste0("L",dist2006,".LISPremiumPos"))
+  
+  assign(paste0("tab3_data_", yr), temp_df)
+}
+
+models_ll = list(
+  q6_2006_ll = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos, data=tab3_data_2006),
+  q6_2007_ll = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos, data=tab3_data_2007),
+  q6_2008_ll = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos, data=tab3_data_2008),
+  q6_2009_ll = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos, data=tab3_data_2009),
+  q6_2010_ll = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos, data=tab3_data_2010)
+  )
+
+modelsummary(models_ll, vcov = ~orgParentCode, 
+             estimate ="{estimate}{stars}", coef_omit = "Intercept",
+             gof_map = c("nobs", "r.squared"))
+
+
+#6.2 Table 3 Panel B
+models_sq = list(
+  q6_2006_sq = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos + I(LISPremiumNeg^2) + I(LISPremiumPos^2), 
+                  data=tab3_data_2006),
+  q6_2007_sq = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos + I(LISPremiumNeg^2) + I(LISPremiumPos^2), 
+                  data=tab3_data_2007),
+  q6_2008_sq = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos + I(LISPremiumNeg^2) + I(LISPremiumPos^2), 
+                  data=tab3_data_2008),
+  q6_2009_sq = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos + I(LISPremiumNeg^2) + I(LISPremiumPos^2),
+                  data=tab3_data_2009),
+  q6_2010_sq = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos + I(LISPremiumNeg^2) + I(LISPremiumPos^2),
+                  data=tab3_data_2010)
+)
+
+rows <- tribble(~term, ~q6_2006_sq, ~q6_2007_sq,  ~q6_2008_sq, ~q6_2009_sq, ~q6_2010_sq,
+                'Premium - Subsidy, 2006', 'Quadratic', 'Quadratic',   'Quadratic', 'Quadratic', 'Quadratic')
+
+attr(rows, 'position') <- 3
+
+panel_B = modelsummary(models_sq, vcov = ~orgParentCode, 
+             estimate ="{estimate}{stars}", coef_map = "BelowBen_2006",
+             gof_map = c("nobs", "r.squared"),
+             add_rows = rows, output = "data.frame")[, c(2, 4:8)]
+
+#6.3 Table 3 Combining Panel A and B
+Tab3 = modelsummary(models_ll, vcov = ~orgParentCode, 
+                    estimate ="{estimate}{stars}", coef_omit = "Intercept",
+                    gof_map = c("nobs", "r.squared"),
+                    add_rows = panel_B)
+
+#
+
+
+
   
