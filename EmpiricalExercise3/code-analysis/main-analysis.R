@@ -74,14 +74,21 @@ binsize = 0.5
 nbin = 10/binsize
 
 source("EmpiricalExercise3/code-analysis/rd_graph3_fn.R")
-q2_graph = erison_fig3(nb = nbin)
+q2_graph = erison_fig3(nb = nbin, return_obj = "graph")
 
 #3. Figure 3 with different nbin
 #3.1 nbin = 10
-q3_graph_nb10 = erison_fig3(nb = 10)
+q3_graph_nb10 = erison_fig3(nb = 10, return_obj = "graph")
 
 #3.2 nbin = 30
-q3_graph_nb30 = erison_fig3(nb = 30)
+q3_graph_nb30 = erison_fig3(nb = 30, return_obj = "graph")
 
+#4. Find the optimal number of bins with an evenly-spaced binning strategy
+q4_graph = erison_fig3(nb = "auto", return_obj = "graph")
+
+q4_lin_mod = erison_fig3(nb = "auto", return_obj = "linear_mod")
+optimal_h_lin = q4_lin_mod$J_MV
+
+#5. Manipulation tests
 
 
