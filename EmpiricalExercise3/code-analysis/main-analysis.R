@@ -4,7 +4,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, haven, janitor, rdrobust, reshape2, rddensity, tibble)
+pacman::p_load(tidyverse, haven, janitor, rdrobust, reshape2, rddensity, tibble, ivreg)
 
 # Importing and Cleaning up the dataset -----------------------------------
 in_data.path <- "EmpiricalExercise3/data/data-in/Ericson 2014/DataFiles"
@@ -233,8 +233,17 @@ rownames(q7_tab_B) = c(2006:2010)
 q7_tab_B = q7_tab_B %>%
   t()
 
-#8. IV
+#8. IV (Use the presence of Part D low-income subsidy as an IV for market share)
+#y: ln(Premium)/x: lnS/ z: LIS
+q8_data = data  %>%
+  filter(benefit == "B") %>%
+  mutate(lnP = log(premium))
 
+q8_result = ivreg(lnP ~ lnS | LIS, data = q8_data)
+
+modelsummary(q8_result, vcov = ~orgParentCode, 
+             estimate ="{estimate}{stars}", coef_omit = "Intercept",
+             gof_map = c("nobs", "r.squared"))
 
 
 
