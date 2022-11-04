@@ -1,0 +1,166 @@
+---
+title: "Final Report for Empirical Exercise 3"
+author: "Ka Yan CHENG"
+date: "`r Sys.Date()`"
+output: bookdown::pdf_document2
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE,
+                      fig.width = 10, fig.height = 5.5, fig.align = 'center')
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, stargazer, modelsummary, kableExtra, xtable, DescTools)
+
+load("emp_ex3.RData")
+```
+
+\newpage
+
+# Introduction
+
+In this report, we are going to replicate some of the results of
+
+Marzilli Ericson, K. M. (2014). Consumer inertia and firm pricing in the Medicare Part D prescription drug insurance exchange. American Economic Journal: Economic Policy, 6(1), 38-64.
+
+Dataset used in the paper is generously offered by the authors in [here](https://www.aeaweb.org/articles?id=10.1257/pol.6.1.38).
+
+[Here](https://github.com/kayancheng/ECON771-HealthEconomicsII/tree/main/EmpiricalExercise3) is the Github Repo containing all necessary files to reproduce results in this report.
+
+\newpage
+
+# Replication of Table 1
+Recreate the table of descriptive statistics (Table 1) from @ericson2014.
+
+**Ans:**
+```{r q1,  results = "asis"}
+rownames(tab_1)<- c('Mean monthly premium', "",'Mean deductible', "", 'Fraction enhanced benefit',
+                       "... in the US", "... in the same state", "N Unique Firms", "N Plans")
+
+tab_1[1,] = paste0("$ ",tab_1[1,])
+tab_1[3,] = paste0("$ ",tab_1[3,])
+tab_1[2,] = paste0("(",tab_1[2,],")")
+tab_1[4,] = paste0("(",tab_1[4,],")")
+xt_tab1 = kable(tab_1, "latex", booktabs = T, align = "c",
+                 caption = "Descriptive Statistics of Medicare Part D Plans")  %>%
+          kable_styling(latex_options = c("hold_position")) %>%
+          pack_rows("Fraction of plans offered by firms already offering a plan ... ", 6, 7, bold = F)
+
+print(xt_tab1, caption.placement = "top")
+```
+
+\newpage
+
+# Replication of Figure 3 
+Recreate Figure 3 from @ericson2014. 
+
+**Ans:**
+```{r q2,  results = "asis"}
+q2_graph
+```
+
+\newpage
+
+# Replication of Figure 3 
+@calonico2015 discuss the appropriate partition size for binned scatterplots such as that in Figure 3 of Ericson (2014). More formally, denote by $\mathcal{P}_{-,n} = \{ P_{-,j} : j=1, 2, ... J_{-, n} \}$ and $\mathcal{P}_{+,n} = \{ P_{+,j} : j=1, 2, ... J_{+, n} \}$ the partitions of the support of the running variable $x_{i}$ on the left and right (respectively) of the cutoff, $\bar{x}$. $P_{-, j}$ and $P_{+, n}$ denote the actual supports for each $j$ partition of size $J_{-,n}$ and $J_{+,n}$, such that $[x_{l}, \bar{x}) = \bigcup_{j=1}^{J_{-,n}} P_{-, j}$ and $(\bar{x}, x_{u}] = \bigcup_{j=1}^{J_{+,n}} P_{+, j}$. Individual bins are denoted by $p_{-,j}$ and $p_{+,j}$. With this notation in hand, we can write the partitions $J_{-,n}$ and $J_{+,n}$ with equally-spaced bins as $$p_{-,j}=x_{l} + j \times \frac{\bar{x} - x_{l}}{J_{-,n}},$$ and $$p_{+,j} = \bar{x} + j \times \frac{x_{u} - \bar{x}}{J_{+,n}}.$$ Recreate Figure 3 from Ericson (2014) using $J_{-,n}=J_{+,n}=10$ and $J_{-,n}=J_{+,n}=30$. Discuss your results and compare them to your figure in Part 2.
+
+**Ans:**
+
+For $J_{-,n}=J_{+,n}=10$:
+```{r q3-10,  results = "asis"}
+q3_graph_nb10
+```
+
+\newpage
+
+For $J_{-,n}=J_{+,n}=30$:
+```{r q3-30,  results = "asis"}
+q3_graph_nb30
+```
+
+\newpage
+
+# Optimal bin number
+With the notation above, @calonico2015 derive the optimal number of partitions for an evenly-spaced (ES) RD plot. They show that $$J_{ES,-,n} = \left\lceil \frac{V_{-}}{\mathcal{V}_{ES,-}} \frac{n}{\text{log}(n)^{2}} \right\rceil$$ and $$J_{ES,+,n} = \left\lceil \frac{V_{+}}{\mathcal{V}_{ES,+}} \frac{n}{\text{log}(n)^{2}} \right\rceil,$$ where $V_{-}$ and $V_{+}$ denote the sample variance of the subsamples to the left and right of the cutoff and $\mathcal{V}_{ES,.}$ is an integrated variance term derived in the paper. Use the `rdrobust` package in `R` (or `Stata` or `Python`) to find the optimal number of bins with an evenly-spaced binning strategy. Report this bin count and recreate your binned scatterplots from parts 2 and 3 based on the optimal bin number.
+
+**Ans:**
+
+The optimal bin number is: `r optimal_h_lin[1]` and  `r optimal_h_lin[2]` on the left hand side and right hand side of the benchmark repectively.
+```{r q4,  results = "asis"}
+q4_graph
+```
+
+\newpage
+
+# Manipulation test 
+One key underlying assumption for RD design is that agents cannot precisely manipulate the running variable. While "precisely" is not very scientific, we can at least test for whether there appears to be a discrete jump in the running variable around the threshold. Evidence of such a jump may suggest that manipulation is present. Provide the results from the manipulation tests described in @cattaneo2018. This test can be implemented with the `rddensity` package in `R`, `Stata`, or `Python`.
+
+**Ans:**
+
+The p-value of the test is `r round(q5_test_result$test$p_jk,2)`, therefore evidence suggests that manipulation exists.
+
+Graphical illustration:
+```{r q5,  results = "asis"}
+q5_fig$Estplot
+```
+From the above graph, we can see that near the cut-off, confidence intervals to the left and to the right largely overlapped with each other. It provides evidence towards the existence of manipulation visually.
+
+\newpage
+
+# Replication of Table 3 - Panel A and B
+Recreate Panels A and B of Table 3 in @ericson2014 using the same bandwidth of $4.00 but without any covariates.
+
+**Ans:**
+
+```{r q6,  results = "asis"}
+xt_tab3 = kable(tab3, "latex", booktabs = T, align = "c",
+                 caption = "Effect of LIS Benchmark Status in 2006 on Plan Enrollment")  %>%
+          kable_styling(latex_options = c("hold_position")) %>%
+  pack_rows("Premium - Subsidy, 2006", 3, 6, bold = F) %>%
+  pack_rows("Panel 1: Local linear, bandwidth $4", 1, 8, bold = F, underline = T) %>%
+  pack_rows("Panel 2: Polynomial, bandwidth $4", 9, 13, bold = F, underline = T)
+
+print(xt_tab3, caption.placement = "top")
+
+```
+
+\newpage
+
+# Minimal coverage error (CE)-optimal bandwidths
+@calonico2020 show that pre-existing optimal bandwidth calculations (such as those used in @ericson2014) are invalid for appropriate inference. They propose an alternative method to derive minimal coverage error (CE)-optimal bandwidths. Re-estimate your RD results using the CE-optimal bandwidth (`rdrobust` will do this for you) and compare the bandwidth and RD estimates to that in Table 3 of @ericson2014.
+
+**Ans:**
+
+For local linear models:
+```{r q7,  results = "asis"}
+rownames(q7_tab_A) = c("Est. coefficient", "Standard error", "Optimal bandwidth")
+xt_7A = kable(q7_tab_A, "latex", booktabs = T, align = "c")  %>%
+          kable_styling(latex_options = c("hold_position"))
+
+print(xt_7A)
+
+```
+
+For quadratic models:
+```{r q7-B,  results = "asis"}
+rownames(q7_tab_B) = c("Est. coefficient", "Standard error", "Optimal bandwidth")
+xt_7B = kable(q7_tab_B, "latex", booktabs = T, align = "c")  %>%
+          kable_styling(latex_options = c("hold_position"))
+
+print(xt_7B)
+```
+
+\newpage
+
+# Instrumental variable 
+Now let's extend the analysis in Section V of @ericson2014 using IV. Use the presence of Part D low-income subsidy as an IV for market share to examine the effect of market share in 2006 on future premium changes.
+```{r q8,  results = "asis"}
+q8_tab
+```
+
+\newpage
+# Discussions
+Discuss your findings and compare results from different binwidths and bandwidths. Compare your results in part 8 to the invest-then-harvest estimates from Table 4 in @ericson2014.
+
+\newpage
+# Conclusion
+Reflect on this assignment. What did you find most challenging? What did you find most surprising?

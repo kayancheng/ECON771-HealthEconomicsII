@@ -154,9 +154,9 @@ models_ll = list(
   q6_2010_ll = lm(lnS ~ BelowBen_2006 + LISPremiumNeg + LISPremiumPos, data=tab3_data_2010)
   )
 
-modelsummary(models_ll, vcov = ~orgParentCode, 
+panel_A = modelsummary(models_ll, vcov = ~orgParentCode, 
              estimate ="{estimate}{stars}", coef_omit = "Intercept",
-             gof_map = c("nobs", "r.squared"))
+             gof_map = c("nobs", "r.squared"), output = "data.frame")
 
 
 #6.2 Table 3 Panel B
@@ -180,14 +180,25 @@ attr(rows, 'position') <- 3
 
 panel_B = modelsummary(models_sq, vcov = ~orgParentCode, 
              estimate ="{estimate}{stars}", coef_map = "BelowBen_2006",
-             gof_map = c("nobs", "r.squared"),
-             add_rows = rows, output = "data.frame")[, c(2, 4:8)]
+             gof_map = c("nobs", "r.squared"), output = "data.frame")
 
-#6.3 Table 3 Combining Panel A and B
-Tab3 = modelsummary(models_ll, vcov = ~orgParentCode, 
-                    estimate ="{estimate}{stars}", coef_omit = "Intercept",
-                    gof_map = c("nobs", "r.squared"),
-                    add_rows = panel_B)
+#6.3 Make final dataframe
+panel_A = as.matrix(panel_A)
+rownames(panel_A)<- c('Below Benchmark, 2006', "",
+                      '... Below Benchmark', "", "... Above Benchmark", "", "N",
+                      "R2")
+
+panel_B = as.matrix(panel_B)
+rownames(panel_B)<- c("Below Benchmark, 2006", "", "N",
+                      "R2")
+
+
+quad = t(as.matrix(c("Quadratic", "Quadratic", "Quadratic", "Quadratic", "Quadratic", "Quadratic", "Quadratic", "Quadratic")))
+rownames(quad) = "Premium - Subsidy, 2006"
+panel_B = rbind(panel_B[1:2,], quad ,panel_B[3:4,])
+
+tab3 = rbind(panel_A, panel_B)[,4:8]
+colnames(tab3) = c("2006", "2007", "2008", "2009", "2010")
 
 #7. Minimal coverage error (CE)-optimal bandwidths
 q7 = function(yr, ll){
@@ -239,12 +250,20 @@ q8_data = data  %>%
   filter(benefit == "B") %>%
   mutate(lnP = log(premium))
 
-q8_result = ivreg(lnP ~ lnS | LIS, data = q8_data)
+models_q8 = list( "IV" = ivreg(lnP ~ lnS | LIS, data = q8_data) )
 
-modelsummary(q8_result, vcov = ~orgParentCode, 
+q8_tab = modelsummary(models_q8, vcov = ~orgParentCode, 
              estimate ="{estimate}{stars}", coef_omit = "Intercept",
-             gof_map = c("nobs", "r.squared"))
+             gof_map = c("nobs", "r.squared"), output = "markdown")
 
+# Save workspace to pass to Rmd ------------------------------------------------
+#First clean out the workspace first
+rm(list = ls()[!ls() %in% c("tab_1", "q2_graph", "q3_graph_nb10", "q3_graph_nb30",
+                            "q4_graph", "optimal_h_lin", "q5_test_result", "q5_fig",
+                            "panel_A", "panel_B", "q7_tab_A", "q7_tab_B", "q8_result", "tab3",
+                            "tab3_data_2006", "tab3_data_2007", "tab3_data_2008", "tab3_data_2009",
+                            "tab3_data_2010", "q8_tab")])
 
+save.image (file = "EmpiricalExercise3/emp_ex3.RData")
 
   
